@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,34 +21,25 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platforms;android-34
-            build-tools;34.0.0
-
-      - name: Accept Android SDK licenses
+      - name: Prepare Android SDK (cmdline-tools + packages)
         shell: bash
         run: |
           set -euo pipefail
-          YES_CMD="yes" 
           SDKROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
-          # Try latest cmdline-tools first, then fallback to versioned path
-          if [ -x "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
-            $YES_CMD | "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
-          elif [ -d "$SDKROOT/cmdline-tools" ]; then
-            # Find any cmdline-tools/*/bin/sdkmanager
-            for d in "$SDKROOT"/cmdline-tools/*/bin; do
-              if [ -x "$d/sdkmanager" ]; then
-                $YES_CMD | "$d/sdkmanager" --licenses
-                break
-              fi
-            done
-          else
-            # As a last resort, rely on PATH
-            $YES_CMD | sdkmanager --licenses
+          mkdir -p "$SDKROOT"
+          # Ensure cmdline-tools latest exists
+          if [ ! -x "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            echo "Installing Android cmdline-tools (latest)"
+            curl -sSL -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+            unzip -qo /tmp/cmdtools.zip -d /tmp/cmdtools
+            mkdir -p "$SDKROOT/cmdline-tools/latest"
+            mv /tmp/cmdtools/cmdline-tools/* "$SDKROOT/cmdline-tools/latest/"
           fi
+          yes | "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platform-tools"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
