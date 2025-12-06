@@ -12,6 +12,7 @@ jobs:
     env:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
+      JAVA_OPTS: -Djava.net.preferIPv4Stack=true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,7 +24,7 @@ jobs:
           java-version: "17"
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip
+        run: sudo apt-get update && sudo apt-get install -y unzip curl wget
 
       - name: Prepare Android SDK (cmdline-tools + packages)
         shell: bash
@@ -31,21 +32,19 @@ jobs:
           set -euxo pipefail
           SDKROOT="${ANDROID_SDK_ROOT}"
           mkdir -p "$SDKROOT"
-          # Ensure cmdline-tools latest exists in writable workspace
+          retry() { n=0; until "$@"; do n=$((n+1)); if [ $n -ge 3 ]; then echo "command failed: $*"; return 1; fi; echo "retry $n: $*"; sleep 3; done }
           if [ ! -x "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
-            echo "Installing Android cmdline-tools (latest) into $SDKROOT"
+            echo "Installing Android cmdline-tools (bootstrap)"
             curl -sSL -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
             unzip -qo /tmp/cmdtools.zip -d /tmp/cmdtools
             mkdir -p "$SDKROOT/cmdline-tools/latest"
             mv /tmp/cmdtools/cmdline-tools/* "$SDKROOT/cmdline-tools/latest/"
           fi
           export PATH="$SDKROOT/cmdline-tools/latest/bin:$SDKROOT/platform-tools:$PATH"
-          java -version
-          sdkmanager --version || true
           yes | sdkmanager --sdk_root="$SDKROOT" --licenses || true
-          yes | sdkmanager --sdk_root="$SDKROOT" --install "platform-tools"
-          yes | sdkmanager --sdk_root="$SDKROOT" --install "platforms;android-34"
-          yes | sdkmanager --sdk_root="$SDKROOT" --install "build-tools;34.0.0"
+          retry bash -lc "yes | sdkmanager --sdk_root=\"$SDKROOT\" --install \"platform-tools\""
+          retry bash -lc "yes | sdkmanager --sdk_root=\"$SDKROOT\" --install \"platforms;android-34\""
+          retry bash -lc "yes | sdkmanager --sdk_root=\"$SDKROOT\" --install \"build-tools;34.0.0\""
           ls -la "$SDKROOT" || true
 
       - name: Make gradlew executable
