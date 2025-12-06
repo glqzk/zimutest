@@ -55,6 +55,12 @@ jobs:
           unzip -q gradle.zip
           ./gradle-8.7/bin/gradle --version
 
+      - name: Configure sdk.dir for Gradle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+
       - name: Make gradlew executable
         run: chmod +x gradlew
 
