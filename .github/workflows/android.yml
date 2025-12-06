@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,18 +25,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SDKROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          SDKROOT="${ANDROID_SDK_ROOT}"
           mkdir -p "$SDKROOT"
-          # Ensure cmdline-tools latest exists
+          # Ensure cmdline-tools latest exists in writable workspace
           if [ ! -x "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
-            echo "Installing Android cmdline-tools (latest)"
+            echo "Installing Android cmdline-tools (latest) into $SDKROOT"
             curl -sSL -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
             unzip -qo /tmp/cmdtools.zip -d /tmp/cmdtools
             mkdir -p "$SDKROOT/cmdline-tools/latest"
             mv /tmp/cmdtools/cmdline-tools/* "$SDKROOT/cmdline-tools/latest/"
           fi
-          yes | "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
-          "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" \
+          export PATH="$SDKROOT/cmdline-tools/latest/bin:$SDKROOT/platform-tools:$PATH"
+          yes | sdkmanager --licenses
+          sdkmanager \
             "platforms;android-34" \
             "build-tools;34.0.0" \
             "platform-tools"
