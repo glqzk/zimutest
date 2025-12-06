@@ -28,7 +28,7 @@ jobs:
       - name: Prepare Android SDK (cmdline-tools + packages)
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           SDKROOT="${ANDROID_SDK_ROOT}"
           mkdir -p "$SDKROOT"
           # Ensure cmdline-tools latest exists in writable workspace
@@ -40,11 +40,13 @@ jobs:
             mv /tmp/cmdtools/cmdline-tools/* "$SDKROOT/cmdline-tools/latest/"
           fi
           export PATH="$SDKROOT/cmdline-tools/latest/bin:$SDKROOT/platform-tools:$PATH"
-          yes | sdkmanager --sdk_root="$SDKROOT" --licenses
-          yes | sdkmanager --sdk_root="$SDKROOT" --install \
-            "platforms;android-34" \
-            "build-tools;34.0.0" \
-            "platform-tools"
+          java -version
+          sdkmanager --version || true
+          yes | sdkmanager --sdk_root="$SDKROOT" --licenses || true
+          yes | sdkmanager --sdk_root="$SDKROOT" --install "platform-tools"
+          yes | sdkmanager --sdk_root="$SDKROOT" --install "platforms;android-34"
+          yes | sdkmanager --sdk_root="$SDKROOT" --install "build-tools;34.0.0"
+          ls -la "$SDKROOT" || true
 
       - name: Make gradlew executable
         run: chmod +x gradlew
