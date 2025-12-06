@@ -24,7 +24,29 @@ jobs:
         with:
           packages: |
             platforms;android-34
-            build-tools;35.0.0
+            build-tools;34.0.0
+
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          set -euo pipefail
+          YES_CMD="yes" 
+          SDKROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          # Try latest cmdline-tools first, then fallback to versioned path
+          if [ -x "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            $YES_CMD | "$SDKROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
+          elif [ -d "$SDKROOT/cmdline-tools" ]; then
+            # Find any cmdline-tools/*/bin/sdkmanager
+            for d in "$SDKROOT"/cmdline-tools/*/bin; do
+              if [ -x "$d/sdkmanager" ]; then
+                $YES_CMD | "$d/sdkmanager" --licenses
+                break
+              fi
+            done
+          else
+            # As a last resort, rely on PATH
+            $YES_CMD | sdkmanager --licenses
+          fi
 
       - name: Make gradlew executable
         run: chmod +x gradlew
