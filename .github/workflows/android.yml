@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      ANDROID_HOME: ${{ github.workspace }}/android-sdk
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,8 +40,8 @@ jobs:
             mv /tmp/cmdtools/cmdline-tools/* "$SDKROOT/cmdline-tools/latest/"
           fi
           export PATH="$SDKROOT/cmdline-tools/latest/bin:$SDKROOT/platform-tools:$PATH"
-          yes | sdkmanager --licenses
-          yes | sdkmanager \
+          yes | sdkmanager --sdk_root="$SDKROOT" --licenses
+          yes | sdkmanager --sdk_root="$SDKROOT" --install \
             "platforms;android-34" \
             "build-tools;34.0.0" \
             "platform-tools"
