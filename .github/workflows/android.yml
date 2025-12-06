@@ -47,11 +47,22 @@ jobs:
           retry bash -lc "yes | sdkmanager --sdk_root=\"$SDKROOT\" --install \"build-tools;34.0.0\""
           ls -la "$SDKROOT" || true
 
+      - name: Install Gradle 8.7
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -sSL -o gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q gradle.zip
+          ./gradle-8.7/bin/gradle --version
+
       - name: Make gradlew executable
         run: chmod +x gradlew
 
       - name: Build APK
-        run: ./gradlew assembleDebug --stacktrace
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./gradle-8.7/bin/gradle -g .gradle assembleDebug --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
